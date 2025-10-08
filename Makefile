@@ -36,12 +36,12 @@ setup: ## Complete project setup (install + database)
 
 db-create: ## Create the database
 	@echo "$(GREEN)Creating database...$(NC)"
-	$(PYTHON) admin_tools.py create --user $(DB_USER)
+	$(PYTHON) backend/db_tools.py create --user $(DB_USER)
 	@echo "$(GREEN)✓ Database created$(NC)"
 
 db-init: ## Initialize database with schema and seed data
 	@echo "$(GREEN)Initializing database...$(NC)"
-	$(PYTHON) admin_tools.py init --user $(DB_USER)
+	$(PYTHON) backend/db_tools.py init --user $(DB_USER)
 	@echo "$(GREEN)✓ Database initialized$(NC)"
 
 db-seed: ## Seed database with sample data
@@ -67,11 +67,11 @@ db-reset: ## Reset database (drop and recreate)
 
 db-stats: ## Show database statistics
 	@echo "$(GREEN)Database Statistics:$(NC)"
-	$(PYTHON) admin_tools.py stats --user $(DB_USER)
+	$(PYTHON) backend/db_tools.py stats --user $(DB_USER)
 
 db-test: ## Test database connection
 	@echo "$(GREEN)Testing database connection...$(NC)"
-	$(PYTHON) test_connection.py
+	$(PYTHON) backend/test_connection.py
 
 test: ## Run all tests
 	@echo "$(GREEN)Running tests...$(NC)"
@@ -80,16 +80,16 @@ test: ## Run all tests
 	@echo "$(GREEN)✓ Tests complete$(NC)"
 
 test-function: ## Test a specific database function (use: make test-function FUNC=function_name PARAMS="param1 param2")
-	$(PYTHON) test_connection.py --function $(FUNC) --params $(PARAMS)
+	$(PYTHON) backend/test_connection.py --function $(FUNC) --params $(PARAMS)
 
 add-borrowings: ## Add test borrowings
 	@echo "$(GREEN)Adding test borrowings...$(NC)"
-	$(PYTHON) admin_tools.py test-borrow --count 5 --user $(DB_USER)
+	$(PYTHON) backend/db_tools.py test-borrow --count 5 --user $(DB_USER)
 	@echo "$(GREEN)✓ Test borrowings added$(NC)"
 
 overdue: ## List overdue books
 	@echo "$(GREEN)Checking overdue books...$(NC)"
-	$(PYTHON) admin_tools.py overdue --user $(DB_USER)
+	$(PYTHON) backend/db_tools.py overdue --user $(DB_USER)
 
 backup: ## Backup the database
 	@echo "$(GREEN)Creating database backup...$(NC)"
@@ -104,7 +104,7 @@ restore: ## Restore database from latest backup
 		echo "$(RED)No backup files found$(NC)"; \
 	else \
 		echo "$(YELLOW)Restoring from $$LATEST_BACKUP...$(NC)"; \
-		$(PYTHON) admin_tools.py restore $$LATEST_BACKUP --user $(DB_USER); \
+		$(PYTHON) backend/db_tools.py restore $$LATEST_BACKUP --user $(DB_USER); \
 		echo "$(GREEN)✓ Database restored$(NC)"; \
 	fi
 
