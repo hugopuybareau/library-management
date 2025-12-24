@@ -101,13 +101,13 @@ class LibraryDatabaseAdmin:
     def init_database(self):
         """Initialize the database with schema and seed data"""
         print("Initializing database schema...")
-        self.execute_sql_file('create_database.sql')
+        self.execute_sql_file('sql/create_database.sql')
         
         print("Seeding database with sample data...")
         self.execute_sql_file('seed_database.sql')
         
         print("Creating queries and functions...")
-        self.execute_sql_file('queries.sql')
+        self.execute_sql_file('sql/queries.sql')
         
         print("Database initialization complete!")
     

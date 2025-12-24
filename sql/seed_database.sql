@@ -1,6 +1,3 @@
--- Library Database Seed Script
--- This script populates the database with sample data
-
 SET search_path TO library;
 
 -- Insert Currency Exchange Rates

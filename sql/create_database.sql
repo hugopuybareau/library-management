@@ -1,4 +1,3 @@
--- Library Database Creation Script for PostgreSQL
 -- Drop existing schema if exists
 DROP SCHEMA IF EXISTS library CASCADE;
 CREATE SCHEMA library;
