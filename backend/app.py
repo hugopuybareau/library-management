@@ -6,7 +6,7 @@ from typing import Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
-from passlib.context import CryptContext
+import bcrypt
 
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,9 +18,6 @@ from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_env_list(name: str, default: str = ""):
@@ -41,19 +38,19 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="Library Management API")
 
+# Sessions (must be before CORS)
+secret_key = os.getenv("SECRET_KEY", "change-me")
+session_hours = int(os.getenv("SESSION_LIFETIME_HOURS", "2"))
+app.add_middleware(SessionMiddleware, secret_key=secret_key, max_age=session_hours * 3600)
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_env_list("CORS_ORIGINS", "http://localhost:8080"),
+    allow_origins=["http://localhost:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Sessions
-secret_key = os.getenv("SECRET_KEY", "change-me")
-session_hours = int(os.getenv("SESSION_LIFETIME_HOURS", "2"))
-app.add_middleware(SessionMiddleware, secret_key=secret_key, max_age=session_hours * 3600)
 
 
 # Database connection manager
@@ -166,15 +163,14 @@ def login(payload: LoginRequest, request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Verify password (if hashed_password exists in database)
-    # For now, check if hashed_password column exists and verify
+    # Verify password
     if "hashed_password" in user and user["hashed_password"]:
-        if not pwd_context.verify(password, user["hashed_password"]):
+        password_bytes = password.encode('utf-8')
+        hashed_bytes = user["hashed_password"].encode('utf-8')
+        if not bcrypt.checkpw(password_bytes, hashed_bytes):
             raise HTTPException(status_code=401, detail="Invalid credentials")
     else:
-        # Temporary: accept any password if no hashed_password set
-        # In production, this should be removed after migration
-        logger.warning(f"User {email} has no hashed_password - accepting any password temporarily")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Set session
     request.session["user_email"] = user["email"]
