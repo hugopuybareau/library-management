@@ -117,13 +117,13 @@ export default function Auth() {
             <p className="text-xs font-medium text-muted-foreground mb-2">Demo Credentials:</p>
             <div className="space-y-1.5 text-xs font-body">
               <p className="text-muted-foreground">
-                <span className="text-foreground font-medium">Admin:</span> admin@ecl.fr / admin123
+                <span className="text-foreground font-medium">Admin:</span> admin@ec-lyon.fr / admin123
               </p>
               <p className="text-muted-foreground">
-                <span className="text-foreground font-medium">Lab Manager:</span> manager@ecl.fr / manager123
+                <span className="text-foreground font-medium">Lab Manager:</span> manager@ec-lyon.fr / manager123
               </p>
               <p className="text-muted-foreground">
-                <span className="text-foreground font-medium">User:</span> user@ecl.fr / user123
+                <span className="text-foreground font-medium">User:</span> user@ec-lyon.fr / user123
               </p>
             </div>
           </div>

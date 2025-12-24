@@ -64,6 +64,7 @@ CREATE TABLE keyword (
 CREATE TABLE library_user (
     email VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    hashed_password VARCHAR(255),
     phone VARCHAR(20),
     registration_date DATE DEFAULT CURRENT_DATE,
     active BOOLEAN DEFAULT TRUE

@@ -76,15 +76,17 @@ INSERT INTO keyword (word) VALUES
 ('agile'), ('microservices'), ('docker'), ('kubernetes');
 
 -- Insert Library Users
-INSERT INTO library_user (email, name, phone) VALUES
-('alice.johnson@ec-lyon.fr', 'Alice Johnson', '+33-6-12-34-56-78'),
-('bob.smith@ec-lyon.fr', 'Bob Smith', '+33-6-23-45-67-89'),
-('carol.white@ec-lyon.fr', 'Carol White', '+33-6-34-56-78-90'),
-('david.brown@ec-lyon.fr', 'David Brown', '+33-6-45-67-89-01'),
-('emma.davis@ec-lyon.fr', 'Emma Davis', '+33-6-56-78-90-12'),
-('frank.wilson@ec-lyon.fr', 'Frank Wilson', '+33-6-67-89-01-23'),
-('grace.taylor@ec-lyon.fr', 'Grace Taylor', '+33-6-78-90-12-34'),
-('henry.martin@ec-lyon.fr', 'Henry Martin', '+33-6-89-01-23-45');
+INSERT INTO library_user (email, name, hashed_password, phone) VALUES
+-- Demo users with known passwords
+('admin@ec-lyon.fr', 'Admin User', '$2b$12$12/u8ZYKaexrDnbuBdgAEOCJ6sY.tjDYWl3ptefJxROf63UxV.Hq6', '+33-6-00-00-00-01'),
+('manager@ec-lyon.fr', 'Lab Manager', '$2b$12$Pquhe8s969cPcmV6KmPAoOazHNJEj1tRKZjqb2cp9fEAy3m5iINuq', '+33-6-00-00-00-02'),
+('user@ec-lyon.fr', 'Regular User', '$2b$12$OELgeD0f5pO7ZTIAHOi7w.aBd29R6Wn4HUBgZUzVNpr1a5R.3/G5.', '+33-6-00-00-00-03'),
+-- Additional users
+('alice.johnson@ec-lyon.fr', 'Alice Johnson', '$2b$12$OELgeD0f5pO7ZTIAHOi7w.aBd29R6Wn4HUBgZUzVNpr1a5R.3/G5.', '+33-6-12-34-56-78'),
+('bob.smith@ec-lyon.fr', 'Bob Smith', '$2b$12$OELgeD0f5pO7ZTIAHOi7w.aBd29R6Wn4HUBgZUzVNpr1a5R.3/G5.', '+33-6-23-45-67-89'),
+('carol.white@ec-lyon.fr', 'Carol White', '$2b$12$OELgeD0f5pO7ZTIAHOi7w.aBd29R6Wn4HUBgZUzVNpr1a5R.3/G5.', '+33-6-34-56-78-90'),
+('david.brown@ec-lyon.fr', 'David Brown', '$2b$12$OELgeD0f5pO7ZTIAHOi7w.aBd29R6Wn4HUBgZUzVNpr1a5R.3/G5.', '+33-6-45-67-89-01'),
+('emma.davis@ec-lyon.fr', 'Emma Davis', '$2b$12$OELgeD0f5pO7ZTIAHOi7w.aBd29R6Wn4HUBgZUzVNpr1a5R.3/G5.', '+33-6-56-78-90-12');
 
 -- Insert Publications
 
@@ -252,6 +254,19 @@ INSERT INTO publication_copy (id_publication, id_lab, id_bookshop, purchase_pric
 
 -- Grant User Access to Labs
 INSERT INTO user_access (email, id_lab) VALUES
+-- Admin has access to all labs
+('admin@ec-lyon.fr', 1),
+('admin@ec-lyon.fr', 2),
+('admin@ec-lyon.fr', 3),
+('admin@ec-lyon.fr', 4),
+('admin@ec-lyon.fr', 5),
+('admin@ec-lyon.fr', 6),
+-- Manager has access to LIRIS, AMPERE, LTDS
+('manager@ec-lyon.fr', 1),
+('manager@ec-lyon.fr', 2),
+('manager@ec-lyon.fr', 3),
+-- Regular user has access to LIRIS
+('user@ec-lyon.fr', 1),
 -- Alice has access to LIRIS and AMPERE
 ('alice.johnson@ec-lyon.fr', 1),
 ('alice.johnson@ec-lyon.fr', 2),
@@ -270,20 +285,7 @@ INSERT INTO user_access (email, id_lab) VALUES
 ('david.brown@ec-lyon.fr', 2),
 ('david.brown@ec-lyon.fr', 5),
 -- Emma has access to CREATIS
-('emma.davis@ec-lyon.fr', 6),
--- Frank has access to LIRIS and LTDS
-('frank.wilson@ec-lyon.fr', 1),
-('frank.wilson@ec-lyon.fr', 3),
--- Grace has access to all labs
-('grace.taylor@ec-lyon.fr', 1),
-('grace.taylor@ec-lyon.fr', 2),
-('grace.taylor@ec-lyon.fr', 3),
-('grace.taylor@ec-lyon.fr', 4),
-('grace.taylor@ec-lyon.fr', 5),
-('grace.taylor@ec-lyon.fr', 6),
--- Henry has access to LMFA and INL
-('henry.martin@ec-lyon.fr', 4),
-('henry.martin@ec-lyon.fr', 5);
+('emma.davis@ec-lyon.fr', 6);
 
 -- Set User Interests
 INSERT INTO user_interest (email, id_keyword) VALUES
@@ -316,12 +318,8 @@ INSERT INTO borrowing (id_copy, email, borrow_date, due_date, return_date) VALUE
 (4, 'bob.smith@ec-lyon.fr', '2024-10-05', '2024-10-19', NULL),
 -- Copy 10 (Clean Code from AMPERE) borrowed by David
 (10, 'david.brown@ec-lyon.fr', '2024-10-03', '2024-10-17', NULL),
--- Copy 16 (C++ from LTDS) borrowed by Frank
-(16, 'frank.wilson@ec-lyon.fr', '2024-10-07', '2024-10-21', NULL),
 -- Copy 20 (Computer Networks from LMFA) borrowed by Carol
-(20, 'carol.white@ec-lyon.fr', '2024-10-02', '2024-10-16', NULL),
--- Copy 26 (Refactoring from INL) borrowed by Grace
-(26, 'grace.taylor@ec-lyon.fr', '2024-10-04', '2024-10-18', NULL);
+(20, 'carol.white@ec-lyon.fr', '2024-10-02', '2024-10-16', NULL);
 
 -- Some historical borrowings (returned)
 INSERT INTO borrowing (id_copy, email, borrow_date, due_date, return_date) VALUES
