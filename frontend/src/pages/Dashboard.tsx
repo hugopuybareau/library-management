@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/stores/authStore';
-import { useLibraryStore } from '@/stores/libraryStore';
+import { useBorrowings } from '@/api/queries/useBorrowings';
+import { useStats } from '@/api/queries/useStats';
 import { StatCard } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,24 +19,10 @@ import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
-  const { publications, borrowings } = useLibraryStore();
+  const { data: borrowings } = useBorrowings();
+  const { data: statsData } = useStats();
 
-  const stats = {
-    totalPublications: publications.length,
-    totalCopies: publications.reduce((acc, p) => acc + p.copies.length, 0),
-    activeBorrowings: borrowings.filter((b) => b.status === 'active').length,
-    overdueBorrowings: borrowings.filter((b) => b.status === 'overdue').length,
-    lostBooks: publications.reduce(
-      (acc, p) => acc + p.copies.filter((c) => c.status === 'lost').length,
-      0
-    ),
-    availableCopies: publications.reduce(
-      (acc, p) => acc + p.copies.filter((c) => c.status === 'on_rack').length,
-      0
-    ),
-  };
-
-  const userBorrowings = borrowings.filter((b) => b.userEmail === user?.email);
+  const userBorrowings = borrowings?.filter((b) => b.userEmail === user?.email) || [];
   const userOverdue = userBorrowings.filter((b) => b.status === 'overdue');
 
   const formatDate = (dateStr: string) => {
@@ -97,7 +84,7 @@ export default function Dashboard() {
               <BookOpen className="w-6 h-6 text-info" />
             </div>
             <div>
-              <p className="text-2xl font-bold font-display">{stats.totalPublications}</p>
+              <p className="text-2xl font-bold font-display">{statsData?.total_publications || 0}</p>
               <p className="text-sm text-muted-foreground">Publications</p>
             </div>
           </div>
@@ -109,7 +96,7 @@ export default function Dashboard() {
               <BookMarked className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold font-display">{stats.availableCopies}</p>
+              <p className="text-2xl font-bold font-display">{(statsData?.total_copies || 0) - (statsData?.active_borrowings || 0)}</p>
               <p className="text-sm text-muted-foreground">Available Copies</p>
             </div>
           </div>
@@ -121,7 +108,7 @@ export default function Dashboard() {
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold font-display">{stats.activeBorrowings}</p>
+              <p className="text-2xl font-bold font-display">{statsData?.active_borrowings || 0}</p>
               <p className="text-sm text-muted-foreground">Active Borrowings</p>
             </div>
           </div>
@@ -133,7 +120,7 @@ export default function Dashboard() {
               <Clock className="w-6 h-6 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold font-display">{stats.overdueBorrowings}</p>
+              <p className="text-2xl font-bold font-display">{statsData?.overdue_borrowings || 0}</p>
               <p className="text-sm text-muted-foreground">Overdue</p>
             </div>
           </div>
@@ -222,7 +209,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3">
                   <BookX className="w-5 h-5 text-destructive" />
                   <span className="text-muted-foreground">Lost Books</span>
-                  <span className="ml-auto font-semibold text-destructive">{stats.lostBooks}</span>
+                  <span className="ml-auto font-semibold text-destructive">0</span>
                 </div>
               </div>
             </div>
@@ -235,36 +222,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Recommendations for regular users */}
-        {user?.role === 'user' && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-display font-semibold">Recommended for You</h2>
-            <div className="space-y-3">
-              {publications.slice(0, 3).map((pub) => (
-                <Link
-                  key={pub.id}
-                  to={`/publications/${pub.id}`}
-                  className="block p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-200"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-14 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground text-sm truncate">{pub.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {pub.authors.join(', ')}
-                      </p>
-                      <Badge variant={pub.type as any} className="mt-2 text-xs">
-                        {pub.type}
-                      </Badge>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

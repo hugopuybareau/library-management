@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useLoginMutation } from '@/api/queries/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Library, LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  
-  const { login, isLoading, isAuthenticated } = useAuthStore();
-  const navigate = useNavigate();
+
+  const { isAuthenticated } = useAuthStore();
+  const loginMutation = useLoginMutation();
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -25,13 +25,14 @@ export default function Auth() {
     e.preventDefault();
     setError('');
 
-    try {
-      await login(email, password);
-      toast.success('Welcome back!');
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
-    }
+    loginMutation.mutate(
+      { email, password },
+      {
+        onError: (err) => {
+          setError(err.message || 'Login failed');
+        },
+      }
+    );
   };
 
   return (
@@ -99,8 +100,8 @@ export default function Auth() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? (
+            <Button type="submit" className="w-full" size="lg" disabled={loginMutation.isPending}>
+              {loginMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <>

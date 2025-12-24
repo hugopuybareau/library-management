@@ -11,14 +11,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/authStore';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { useBorrowings } from '@/api/queries/useBorrowings';
+import { useLogoutMutation } from '@/api/queries/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 
 export function AppHeader() {
-  const { user, logout } = useAuthStore();
-  const { searchQuery, setSearchQuery, borrowings } = useLibraryStore();
-  
-  const overdueCount = borrowings.filter(b => b.status === 'overdue').length;
+  const { user } = useAuthStore();
+  const { searchQuery, setSearchQuery } = useLibraryStore();
+  const { data: borrowings } = useBorrowings();
+  const logoutMutation = useLogoutMutation();
+
+  const overdueCount = borrowings?.filter((b) => b.status === 'overdue').length || 0;
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center px-6 gap-4 sticky top-0 z-50">
@@ -105,7 +109,7 @@ export function AppHeader() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-destructive">
+            <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-destructive">
               Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>

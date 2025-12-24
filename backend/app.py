@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Library Management System - FastAPI
-Main application file (converted from Flask)
-"""
-
 import os
 import logging
 from datetime import datetime, timedelta
@@ -12,6 +6,7 @@ from typing import Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
+from passlib.context import CryptContext
 
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +18,9 @@ from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_env_list(name: str, default: str = ""):
@@ -46,7 +44,7 @@ app = FastAPI(title="Library Management API")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_env_list("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"),
+    allow_origins=get_env_list("CORS_ORIGINS", "http://localhost:8080"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -120,6 +118,7 @@ def require_admin(user=Depends(require_login)):
 # Request models
 class LoginRequest(BaseModel):
     email: str
+    password: str
 
 
 class BorrowRequest(BaseModel):
@@ -132,6 +131,22 @@ class CanBorrowRequest(BaseModel):
     email: Optional[str] = None
 
 
+class ProposalCreate(BaseModel):
+    title: str
+    authors: str
+    publication_type: str
+    publisher: Optional[str] = None
+    year: int
+    estimated_price: Optional[float] = None
+    currency: Optional[str] = "EUR"
+    justification: str
+
+
+class ProposalUpdate(BaseModel):
+    status: str
+    comments: Optional[str] = None
+
+
 # ============================================================================
 # AUTHENTICATION ENDPOINTS
 # ============================================================================
@@ -140,6 +155,7 @@ class CanBorrowRequest(BaseModel):
 @app.post("/api/auth/login")
 def login(payload: LoginRequest, request: Request):
     email = payload.email
+    password = payload.password
 
     user = db.execute_query(
         "SELECT * FROM library.library_user WHERE email = %s AND active = true",
@@ -149,6 +165,16 @@ def login(payload: LoginRequest, request: Request):
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Verify password (if hashed_password exists in database)
+    # For now, check if hashed_password column exists and verify
+    if "hashed_password" in user and user["hashed_password"]:
+        if not pwd_context.verify(password, user["hashed_password"]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    else:
+        # Temporary: accept any password if no hashed_password set
+        # In production, this should be removed after migration
+        logger.warning(f"User {email} has no hashed_password - accepting any password temporarily")
 
     # Set session
     request.session["user_email"] = user["email"]
@@ -602,6 +628,98 @@ def get_statistics():
 
 
 # ============================================================================
+# PROPOSALS ENDPOINTS
+# ============================================================================
+
+
+@app.get("/api/proposals")
+def get_proposals(user=Depends(require_login)):
+    """Get all proposals. Admin sees all, regular users see only their own."""
+    email = user["email"]
+    role = user["role"]
+
+    if role == "admin":
+        # Admin sees all proposals
+        proposals = db.execute_query(
+            """
+            SELECT
+                pp.*,
+                lu.name as submitted_by_name
+            FROM library.proposed_publication pp
+            LEFT JOIN library.library_user lu ON pp.email = lu.email
+            ORDER BY pp.date_proposal DESC
+            """
+        )
+    else:
+        # Regular users see only their proposals
+        proposals = db.execute_query(
+            """
+            SELECT
+                pp.*,
+                lu.name as submitted_by_name
+            FROM library.proposed_publication pp
+            LEFT JOIN library.library_user lu ON pp.email = lu.email
+            WHERE pp.email = %s
+            ORDER BY pp.date_proposal DESC
+            """,
+            (email,)
+        )
+
+    return proposals
+
+
+@app.post("/api/proposals")
+def create_proposal(proposal: ProposalCreate, user=Depends(require_login)):
+    """Create a new publication proposal."""
+    email = user["email"]
+
+    # Build details JSONB
+    details = {
+        "authors": proposal.authors,
+        "publisher": proposal.publisher,
+        "year": proposal.year,
+        "estimated_price": proposal.estimated_price,
+        "currency": proposal.currency,
+        "justification": proposal.justification
+    }
+
+    result = db.execute_query(
+        """
+        INSERT INTO library.proposed_publication
+        (email, title, publication_type, details, status)
+        VALUES (%s, %s, %s, %s, 'pending')
+        RETURNING id_proposal, date_proposal
+        """,
+        (email, proposal.title, proposal.publication_type, psycopg2.extras.Json(details))
+    )
+
+    return {
+        "message": "Proposal created successfully",
+        "id_proposal": result[0]["id_proposal"] if result else None,
+        "date_proposal": result[0]["date_proposal"] if result else None
+    }
+
+
+@app.put("/api/proposals/{proposal_id}")
+def update_proposal(proposal_id: int, update: ProposalUpdate, user=Depends(require_admin)):
+    """Update proposal status (admin only)."""
+    email = user["email"]
+
+    db.execute_query(
+        """
+        UPDATE library.proposed_publication
+        SET status = %s,
+            reviewed_by = %s,
+            reviewed_at = CURRENT_TIMESTAMP
+        WHERE id_proposal = %s
+        """,
+        (update.status, email, proposal_id)
+    )
+
+    return {"message": "Proposal updated successfully"}
+
+
+# ============================================================================
 # ERROR HANDLERS
 # ============================================================================
 
@@ -625,6 +743,10 @@ def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 if __name__ == "__main__":
+    import uvicorn
+    import sys
+    from pathlib import Path
+
     # Test database connection
     try:
         test_conn = db.get_connection()
@@ -634,13 +756,18 @@ if __name__ == "__main__":
         print(f"✗ Database connection failed: {e}")
         raise SystemExit(1)
 
-    # Run with Uvicorn programmatically to preserve `python backend/app.py`
-    import uvicorn
+    # Configure server
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "5001"))
+    reload = os.getenv("ENV", "development") == "development"
 
-    uvicorn.run(
-        "backend.app:app",
-        host=os.getenv("HOST", "0.0.0.0"),
-        port=int(os.getenv("PORT", "5000")),
-        reload=os.getenv("FLASK_ENV", "development") == "development",
-    )
+    # Add backend dir to path for module resolution
+    backend_dir = Path(__file__).parent
+    sys.path.insert(0, str(backend_dir))
+
+    # Run server
+    if reload:
+        uvicorn.run("app:app", host=host, port=port, reload=reload, reload_dirs=[str(backend_dir)])
+    else:
+        uvicorn.run(app, host=host, port=port)
 
