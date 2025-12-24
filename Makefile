@@ -116,27 +116,6 @@ clean: ## Clean temporary files and caches
 	rm -f library.log
 	@echo "$(GREEN)✓ Cleanup complete$(NC)"
 
-run-api: ## Run the Flask API server
-	@echo "$(GREEN)Starting Flask API server...$(NC)"
-	FLASK_ENV=development $(PYTHON) app.py
-
-run-frontend: ## Instructions for running the frontend
-	@echo "$(YELLOW)To run the frontend:$(NC)"
-	@echo "1. Go to Lovable.dev"
-	@echo "2. Create a new project"
-	@echo "3. Copy the content from lovable_prompt.md"
-	@echo "4. Let Lovable generate the interface"
-	@echo ""
-	@echo "Or if you have a local React app:"
-	@echo "  cd frontend && npm start"
-
-logs: ## Show application logs
-	@if [ -f library.log ]; then \
-		tail -f library.log; \
-	else \
-		echo "$(YELLOW)No log file found$(NC)"; \
-	fi
-
 psql: ## Connect to database with psql
 	psql -U $(DB_USER) -d $(DB_NAME)
 
