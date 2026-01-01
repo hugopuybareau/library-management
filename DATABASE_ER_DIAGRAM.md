@@ -34,7 +34,7 @@ erDiagram
 
     PUBLISHER {
         int id_publisher PK
-        string name UK
+        string name "UNIQUE"
         timestamp created_at
     }
 
@@ -47,7 +47,7 @@ erDiagram
 
     LAB {
         int id_lab PK
-        string name UK
+        string name "UNIQUE"
         string department
         timestamp created_at
     }
@@ -61,20 +61,20 @@ erDiagram
     }
 
     CURRENCY {
-        enum code PK "EUR|USD|GBP"
+        string code PK "EUR_USD_GBP"
         decimal rate_to_euro
         timestamp last_updated
     }
 
     CATEGORY {
         int id_category PK
-        string name UK
+        string name "UNIQUE"
         text description
     }
 
     KEYWORD {
         int id_keyword PK
-        string word UK
+        string word "UNIQUE"
     }
 
     LIBRARY_USER {
@@ -90,26 +90,26 @@ erDiagram
         int id_publication PK
         string title
         int year_publication
-        enum publication_type "book|periodic|thesis|scientific_report"
+        string publication_type "book_periodic_thesis_report"
         int id_publisher FK
         string edition
         timestamp created_at
     }
 
     REGULAR_BOOK {
-        int id_publication PK_FK
-        string isbn UK
+        int id_publication "PK, FK"
+        string isbn "UNIQUE"
     }
 
     PERIODIC {
-        int id_publication PK_FK
+        int id_publication "PK, FK"
         string volume_number
     }
 
     INTERNAL_REPORT {
-        int id_publication PK_FK
-        string identification_number UK
-        string report_type "thesis|scientific_report"
+        int id_publication "PK, FK"
+        string identification_number "UNIQUE"
+        string report_type "thesis_or_scientific_report"
     }
 
     PUBLICATION_COPY {
@@ -118,36 +118,36 @@ erDiagram
         int id_lab FK
         int id_bookshop FK
         decimal purchase_price
-        enum currency "EUR|USD|GBP"
+        string currency "EUR_USD_GBP"
         date purchase_date
-        enum status "on_rack|issued_to|lost|to_be_bought"
+        string status "on_rack_issued_to_lost_to_be_bought"
     }
 
     PUBLICATION_AUTHOR {
-        int id_publication PK_FK
-        int id_author PK_FK
+        int id_publication "PK, FK"
+        int id_author "PK, FK"
         int author_order
     }
 
     BOOK_CATEGORY {
-        int id_publication PK_FK
-        int id_category PK_FK
+        int id_publication "PK, FK"
+        int id_category "PK, FK"
     }
 
     PUBLICATION_KEYWORD {
-        int id_publication PK_FK
-        int id_keyword PK_FK
+        int id_publication "PK, FK"
+        int id_keyword "PK, FK"
     }
 
     USER_ACCESS {
-        string email PK_FK
-        int id_lab PK_FK
+        string email "PK, FK"
+        int id_lab "PK, FK"
         date granted_date
     }
 
     USER_INTEREST {
-        string email PK_FK
-        int id_keyword PK_FK
+        string email "PK, FK"
+        int id_keyword "PK, FK"
     }
 
     BORROWING {
@@ -163,10 +163,10 @@ erDiagram
         int id_proposal PK
         string email FK
         string title
-        enum publication_type
+        string publication_type
         jsonb details
         date date_proposal
-        string status "pending|approved|rejected|ordered"
+        string status "pending_approved_rejected_ordered"
     }
 ```
 
