@@ -26,9 +26,15 @@ export interface BackendPublication {
   volume_number?: number;
   identification_number?: string;
   report_type?: string;
+  copies?: Array<{
+    id_copy: number;
+    id_lab: number;
+    lab_name: string;
+    status: 'on_rack' | 'issued_to' | 'lost' | 'to_be_bought';
+  }>;
 }
 
-export interface BackendPublicationDetail extends BackendPublication {
+export interface BackendPublicationDetail extends Omit<BackendPublication, 'authors' | 'copies'> {
   authors: Array<{ name: string; email?: string }>;
   categories?: string[];
   keywords?: string[];

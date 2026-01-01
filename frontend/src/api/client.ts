@@ -1,3 +1,5 @@
+import { useAuthStore } from '@/stores/authStore';
+
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
@@ -15,9 +17,15 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     },
   });
 
-  // Handle 401 Unauthorized - redirect to login
+  // Handle 401 Unauthorized - clear auth and redirect to login
   if (response.status === 401) {
-    window.location.href = '/auth';
+    // Clear the auth store to prevent redirect loops
+    useAuthStore.getState().logout();
+
+    // Only redirect if not already on auth page
+    if (!window.location.pathname.includes('/auth')) {
+      window.location.href = '/auth';
+    }
     throw new Error('Unauthorized');
   }
 

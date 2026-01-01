@@ -6,13 +6,10 @@ import {
   Users,
   Building2,
   FileBarChart,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Library,
-  FileText,
-  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,7 +30,6 @@ const navItems: NavItem[] = [
   { title: 'My Borrowings', href: '/borrowings', icon: BookMarked, roles: ['user', 'lab_manager'] },
   { title: 'Users', href: '/users', icon: Users, roles: ['admin'] },
   { title: 'Labs', href: '/labs', icon: Building2, roles: ['admin', 'lab_manager'] },
-  { title: 'Proposals', href: '/proposals', icon: FileText },
   { title: 'Reports', href: '/reports', icon: FileBarChart, roles: ['admin', 'lab_manager'] },
 ];
 

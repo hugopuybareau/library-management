@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,10 +27,12 @@ import {
   Edit,
   Trash2,
   Key,
+  Loader2,
 } from 'lucide-react';
 import { useAuthStore, UserRole } from '@/stores/authStore';
 import { Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useUsers } from '@/api/queries/useUsers';
 
 interface UserData {
   email: string;
@@ -38,66 +40,40 @@ interface UserData {
   role: UserRole;
   labAccess: string[];
   status: 'active' | 'inactive';
-  lastLogin?: string;
+  activeBorrowings?: number;
+  labAccessCount?: number;
 }
-
-const mockUsers: UserData[] = [
-  {
-    email: 'admin@ecl.fr',
-    name: 'Admin User',
-    role: 'admin',
-    labAccess: ['LIRIS', 'AMPERE', 'LTDS', 'ICJ', 'LMFA'],
-    status: 'active',
-    lastLogin: '2024-12-24',
-  },
-  {
-    email: 'manager@ecl.fr',
-    name: 'Lab Manager',
-    role: 'lab_manager',
-    labAccess: ['LIRIS', 'AMPERE'],
-    status: 'active',
-    lastLogin: '2024-12-23',
-  },
-  {
-    email: 'user@ecl.fr',
-    name: 'Regular User',
-    role: 'user',
-    labAccess: ['LIRIS'],
-    status: 'active',
-    lastLogin: '2024-12-22',
-  },
-  {
-    email: 'researcher@ecl.fr',
-    name: 'Marie Dupont',
-    role: 'user',
-    labAccess: ['AMPERE', 'LTDS'],
-    status: 'active',
-    lastLogin: '2024-12-20',
-  },
-  {
-    email: 'inactive@ecl.fr',
-    name: 'Inactive User',
-    role: 'user',
-    labAccess: ['ICJ'],
-    status: 'inactive',
-    lastLogin: '2024-11-15',
-  },
-];
 
 export default function UsersPage() {
   const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [users] = useState<UserData[]>(mockUsers);
+  const { data: usersData, isLoading, error } = useUsers();
 
   if (user?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Transform backend data to frontend format
+  const users: UserData[] = useMemo(() => {
+    if (!usersData) return [];
+    return usersData.map((u: any) => ({
+      email: u.email,
+      name: u.name,
+      role: u.email.includes('admin') ? 'admin' : 'user' as UserRole,
+      labAccess: [], // Will be populated from user_access table
+      status: u.active ? 'active' : 'inactive',
+      activeBorrowings: u.active_borrowings || 0,
+      labAccessCount: u.lab_access_count || 0,
+    }));
+  }, [usersData]);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [users, searchQuery]);
 
   const roleConfig = {
     admin: { label: 'Admin', variant: 'destructive' as const },
@@ -105,12 +81,37 @@ export default function UsersPage() {
     user: { label: 'User', variant: 'secondary' as const },
   };
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: users.length,
     active: users.filter((u) => u.status === 'active').length,
     admins: users.filter((u) => u.role === 'admin').length,
     managers: users.filter((u) => u.role === 'lab_manager').length,
-  };
+  }), [users]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Users className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">Failed to load users</h3>
+          <p className="text-muted-foreground">{(error as Error).message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -207,7 +208,7 @@ export default function UsersPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>Lab Access</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
+                <TableHead>Borrowings</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -236,17 +237,9 @@ export default function UsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {userData.labAccess.slice(0, 3).map((lab) => (
-                        <Badge key={lab} variant="outline" className="text-xs">
-                          {lab}
-                        </Badge>
-                      ))}
-                      {userData.labAccess.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{userData.labAccess.length - 3}
-                        </Badge>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">{userData.labAccessCount || 0} lab(s)</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -255,7 +248,7 @@ export default function UsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {userData.lastLogin || 'Never'}
+                    {userData.activeBorrowings || 0} active
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

@@ -19,6 +19,14 @@ export function transformPublication(backend: BackendPublication): Publication {
     scientific_report: 'report',
   };
 
+  // Map backend status to frontend status
+  const statusMap: Record<string, 'on_rack' | 'borrowed' | 'lost'> = {
+    on_rack: 'on_rack',
+    issued_to: 'borrowed',
+    lost: 'lost',
+    to_be_bought: 'on_rack',
+  };
+
   return {
     id: String(backend.id_publication),
     title: backend.title,
@@ -30,7 +38,14 @@ export function transformPublication(backend: BackendPublication): Publication {
     issn: backend.publication_type === 'periodic' ? backend.identification_number : undefined,
     keywords: [], // Will be populated from detail view
     categories: [], // Will be populated from detail view
-    copies: [], // Will be populated from detail view
+    copies: backend.copies
+      ? backend.copies.map((copy: any) => ({
+          labId: String(copy.id_lab),
+          labName: copy.lab_name,
+          status: statusMap[copy.status] || 'on_rack',
+          copyId: String(copy.id_copy),
+        }))
+      : [],
     description: undefined,
     language: undefined,
   };
@@ -40,31 +55,43 @@ export function transformPublication(backend: BackendPublication): Publication {
  * Transform detailed backend publication to frontend format
  */
 export function transformPublicationDetail(backend: BackendPublicationDetail): Publication {
-  const base = transformPublication(backend);
+  // Map publication_type to frontend type
+  const typeMap: Record<string, Publication['type']> = {
+    book: 'book',
+    periodic: 'periodic',
+    thesis: 'thesis',
+    scientific_report: 'report',
+  };
 
   // Map backend status to frontend status
   const statusMap: Record<string, 'on_rack' | 'borrowed' | 'lost'> = {
     on_rack: 'on_rack',
     issued_to: 'borrowed',
     lost: 'lost',
-    to_be_bought: 'on_rack', // Treat as on_rack for now
+    to_be_bought: 'on_rack',
   };
 
   return {
-    ...base,
-    authors: Array.isArray(backend.authors)
-      ? backend.authors.map((a) => (typeof a === 'string' ? a : a.name))
-      : base.authors,
-    categories: backend.categories || [],
+    id: String(backend.id_publication),
+    title: backend.title,
+    type: typeMap[backend.publication_type] || 'book',
+    authors: backend.authors.map((a) => a.name),
+    publisher: backend.publisher_name,
+    year: backend.year_publication,
+    isbn: backend.isbn,
+    issn: backend.publication_type === 'periodic' ? backend.identification_number : undefined,
     keywords: backend.keywords || [],
+    categories: backend.categories || [],
     copies: backend.copies
       ? backend.copies.map((copy) => ({
-          labId: copy.lab_name, // Using lab name as ID since id_lab not returned
+          labId: copy.lab_name,
           labName: copy.lab_name,
           status: statusMap[copy.status] || 'on_rack',
           copyId: String(copy.id_copy),
         }))
       : [],
+    description: undefined,
+    language: undefined,
   };
 }
 

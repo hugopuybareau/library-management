@@ -280,6 +280,23 @@ def get_publications(
 
     publications = db.execute_query(query, params)
 
+    # Enrich publications with copy information
+    for pub in publications:
+        copies = db.execute_query(
+            """
+            SELECT
+                pc.id_copy,
+                pc.status,
+                l.id_lab,
+                l.name as lab_name
+            FROM library.publication_copy pc
+            JOIN library.lab l ON pc.id_lab = l.id_lab
+            WHERE pc.id_publication = %s
+            """,
+            (pub['id_publication'],)
+        )
+        pub['copies'] = copies
+
     count_query = "SELECT COUNT(DISTINCT p.id_publication) FROM library.publication p"
     if search or type or lab_id is not None or available:
         count_query += " LEFT JOIN library.publication_copy pc ON p.id_publication = pc.id_publication WHERE 1=1"

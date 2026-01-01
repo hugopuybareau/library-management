@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useLibraryStore, Publication } from '@/stores/libraryStore';
 import { useAuthStore } from '@/stores/authStore';
+import { usePublications } from '@/api/queries/usePublications';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,19 +24,23 @@ import {
   Building2,
   User,
   BookMarked,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Publications() {
-  const { publications, searchQuery, setSearchQuery, filters, setFilters, resetFilters } =
+  const { searchQuery, setSearchQuery, filters, setFilters, resetFilters } =
     useLibraryStore();
   const { user } = useAuthStore();
+  const { data: publicationsData, isLoading, error } = usePublications();
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
   const publicationTypes = ['book', 'periodic', 'thesis', 'report'];
   const labs = ['LIRIS', 'AMPERE', 'LTDS', 'ICJ', 'LMFA'];
+
+  const publications = publicationsData?.publications || [];
 
   const filteredPublications = useMemo(() => {
     return publications.filter((pub) => {
@@ -99,6 +104,31 @@ export default function Publications() {
   };
 
   const hasActiveFilters = filters.type.length > 0 || filters.lab.length > 0 || filters.availability.length > 0;
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading publications...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <BookOpen className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">Failed to load publications</h3>
+          <p className="text-muted-foreground">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
