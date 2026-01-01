@@ -1,8 +1,8 @@
-# Library Management System - Entity-Relationship Diagram
+# Library Management System - Diagramme entité-associations
 
 Comme je n'ai jamais réussi à faire macher DB_main sur Mac (j'ai même essayé de le faire tourner sur une image Docker arm...), j'ai utilisé cette solution pour construire le diagramme et l'intérgrer à mon rapport. Si vous observez ce fichier depuis la page github, vous pouvez pour déplacer à l'intérieur du diagramme pour comprendre la structure que j'ai mise en place. 
 
-## Database Schema Overview
+## Schéma
 
 ```mermaid
 erDiagram
@@ -172,13 +172,7 @@ erDiagram
     }
 ```
 
----
-
-## Detailed Entity Descriptions
-
----
-
-## Inheritance Structure
+## Structure
 
 ```
 PUBLICATION (Superclass)
@@ -196,7 +190,7 @@ PUBLICATION (Superclass)
 
 ---
 
-## Status Flow Diagram
+## Diagramme pour le status des publications
 
 ```mermaid
 stateDiagram-v2
@@ -211,7 +205,7 @@ stateDiagram-v2
 
 ---
 
-## Multi-Currency Support
+## Différentes currencies
 
 ```mermaid
 graph LR
@@ -226,7 +220,7 @@ graph LR
 
 ---
 
-## Access Control Model
+## Contrôle d'accès
 
 ```mermaid
 graph TD
