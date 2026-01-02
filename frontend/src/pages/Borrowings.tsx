@@ -1,5 +1,5 @@
-import { useLibraryStore } from '@/stores/libraryStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useBorrowings, useReturnMutation } from '@/api/queries/useBorrowings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,16 +18,16 @@ import {
   ArrowUpDown,
   RotateCcw,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function Borrowings() {
-  const { borrowings } = useLibraryStore();
   const { user } = useAuthStore();
+  const { data: borrowings = [], isLoading, error } = useBorrowings();
+  const returnMutation = useReturnMutation();
 
-  const userBorrowings = borrowings.filter((b) => b.userEmail === user?.email);
-  const activeBorrowings = userBorrowings.filter((b) => b.status !== 'returned');
-  const pastBorrowings = userBorrowings.filter((b) => b.status === 'returned');
+  const activeBorrowings = borrowings.filter((b) => !b.returnDate);
+  const pastBorrowings = borrowings.filter((b) => b.returnDate);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -44,13 +44,34 @@ export default function Borrowings() {
     return diff;
   };
 
-  const handleReturn = (borrowingId: string, title: string) => {
-    toast.success(`"${title}" has been marked for return`);
+  const handleReturn = (borrowingId: number) => {
+    returnMutation.mutate(borrowingId);
   };
 
-  const handleExtend = (borrowingId: string, title: string) => {
-    toast.success(`Due date for "${title}" has been extended by 7 days`);
-  };
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading borrowings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <BookMarked className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">Failed to load borrowings</h3>
+          <p className="text-muted-foreground">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -97,7 +118,7 @@ export default function Borrowings() {
             </div>
             <div>
               <p className="text-2xl font-bold font-display">
-                {activeBorrowings.filter((b) => b.status === 'overdue').length}
+                {activeBorrowings.filter((b) => getDaysUntilDue(b.dueDate) < 0).length}
               </p>
               <p className="text-sm text-muted-foreground">Overdue</p>
             </div>
@@ -169,24 +190,18 @@ export default function Borrowings() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleExtend(borrowing.id, borrowing.publicationTitle)}
-                            disabled={isOverdue}
-                          >
-                            <Clock className="w-3 h-3 mr-1" />
-                            Extend
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleReturn(borrowing.id, borrowing.publicationTitle)}
-                          >
+                        <Button
+                          size="sm"
+                          onClick={() => handleReturn(Number(borrowing.id))}
+                          disabled={returnMutation.isPending}
+                        >
+                          {returnMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
                             <RotateCcw className="w-3 h-3 mr-1" />
-                            Return
-                          </Button>
-                        </div>
+                          )}
+                          Return
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );

@@ -15,10 +15,7 @@ from starlette.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 
-
-# Load environment variables
 load_dotenv()
-
 
 def get_env_list(name: str, default: str = ""):
     raw = os.getenv(name, default)
@@ -63,7 +60,7 @@ class Database:
         self.password = os.getenv("DB_PASSWORD", "")
 
     def get_connection(self):
-        return psycopg2.connect(
+        conn = psycopg2.connect(
             host=self.host,
             port=self.port,
             database=self.database,
@@ -71,13 +68,20 @@ class Database:
             password=self.password,
             cursor_factory=RealDictCursor,
         )
+        # Set search path to library schema
+        cursor = conn.cursor()
+        cursor.execute("SET search_path TO library, public;")
+        cursor.close()
+        return conn
 
     def execute_query(self, query, params=None, fetch_one: bool = False):
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute(query, params)
-            if query.strip().upper().startswith("SELECT"):
+            query_upper = query.strip().upper()
+            # Check if query returns data (SELECT or INSERT/UPDATE with RETURNING)
+            if query_upper.startswith("SELECT") or "RETURNING" in query_upper:
                 return cursor.fetchone() if fetch_one else cursor.fetchall()
             else:
                 conn.commit()
@@ -421,13 +425,15 @@ def get_borrowings(request: Request, user=Depends(require_login)):
     if role == "admin":
         borrowings = db.execute_query(
             """
-            SELECT 
+            SELECT
                 b.id_borrowing,
+                b.id_copy,
                 b.borrow_date,
                 b.due_date,
                 b.return_date,
                 lu.email,
                 lu.name as user_name,
+                p.id_publication,
                 p.title,
                 l.name as lab_name
             FROM library.borrowing b
@@ -441,17 +447,22 @@ def get_borrowings(request: Request, user=Depends(require_login)):
     else:
         borrowings = db.execute_query(
             """
-            SELECT 
+            SELECT
                 b.id_borrowing,
+                b.id_copy,
                 b.borrow_date,
                 b.due_date,
                 b.return_date,
+                b.email,
+                lu.name as user_name,
+                p.id_publication,
                 p.title,
                 l.name as lab_name
             FROM library.borrowing b
             JOIN library.publication_copy pc ON b.id_copy = pc.id_copy
             JOIN library.publication p ON pc.id_publication = p.id_publication
             JOIN library.lab l ON pc.id_lab = l.id_lab
+            JOIN library.library_user lu ON b.email = lu.email
             WHERE b.email = %s
             ORDER BY b.borrow_date DESC
             """,
@@ -582,6 +593,64 @@ def report_can_borrow(payload: CanBorrowRequest, request: Request, user=Depends(
 def report_lost_books(user=Depends(require_admin)):
     lost_books = db.execute_query("SELECT * FROM library.lost_books_report")
     return lost_books
+
+
+@app.get("/api/reports/current-borrowers")
+def report_current_borrowers(
+    publication_id: int,
+    request: Request,
+    user=Depends(require_login)
+):
+    email = request.session.get("user_email")
+    borrowers = db.execute_function(
+        "find_current_borrowers",
+        (email, publication_id),
+    )
+    return borrowers
+
+
+@app.get("/api/reports/by-category-price")
+def report_by_category_price(
+    category: str,
+    max_price: float,
+    user=Depends(require_login)
+):
+    publications = db.execute_function(
+        "get_publications_by_category_and_price",
+        (category, max_price),
+    )
+    return publications
+
+
+@app.get("/api/reports/by-author-year")
+def report_by_author_year(
+    author: str,
+    year: int,
+    user=Depends(require_login)
+):
+    publications = db.execute_function(
+        "get_publications_by_author_after_year",
+        (author, year),
+    )
+    return publications
+
+
+@app.get("/api/reports/publisher-chronology")
+def report_publisher_chronology(
+    publisher: str,
+    user=Depends(require_login)
+):
+    books = db.execute_function(
+        "get_publisher_books_chronological",
+        (publisher,),
+    )
+    return books
+
+
+@app.get("/api/reports/overdue-borrowings")
+def report_overdue_borrowings(user=Depends(require_admin)):
+    overdue = db.execute_query("SELECT * FROM library.overdue_borrowings")
+    return overdue
 
 
 # ============================================================================

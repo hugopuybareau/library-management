@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Database Connection Test Script
-Tests the connection and basic queries to the library database
-"""
-
 import psycopg2
 import sys
 import os

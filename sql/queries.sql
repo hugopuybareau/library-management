@@ -230,8 +230,8 @@ RETURNS TABLE (
     title VARCHAR(500),
     isbn VARCHAR(20),
     min_price_euro DECIMAL,
-    publishers VARCHAR,
-    categories VARCHAR
+    publishers TEXT,
+    categories TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -270,7 +270,7 @@ RETURNS TABLE (
     title VARCHAR(500),
     year_publication INTEGER,
     publication_type publication_type,
-    all_authors VARCHAR,
+    all_authors TEXT,
     publisher VARCHAR
 ) AS $$
 BEGIN
@@ -307,7 +307,7 @@ RETURNS TABLE (
     year INTEGER,
     title VARCHAR(500),
     isbn VARCHAR(20),
-    authors VARCHAR,
+    authors TEXT,
     edition VARCHAR(50)
 ) AS $$
 BEGIN

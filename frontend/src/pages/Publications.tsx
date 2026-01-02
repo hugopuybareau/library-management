@@ -2,10 +2,19 @@ import { useState, useMemo } from 'react';
 import { useLibraryStore, Publication } from '@/stores/libraryStore';
 import { useAuthStore } from '@/stores/authStore';
 import { usePublications } from '@/api/queries/usePublications';
+import { useBorrowMutation } from '@/api/queries/useBorrowings';
+import { useCurrentBorrowers } from '@/api/queries/useReports';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -25,6 +34,9 @@ import {
   User,
   BookMarked,
   Loader2,
+  Mail,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,9 +45,15 @@ export default function Publications() {
     useLibraryStore();
   const { user } = useAuthStore();
   const { data: publicationsData, isLoading, error } = usePublications();
+  const borrowMutation = useBorrowMutation();
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedPublicationId, setSelectedPublicationId] = useState<number | null>(null);
+
+  const { data: currentBorrowers = [], isLoading: loadingBorrowers } = useCurrentBorrowers(
+    selectedPublicationId || 0
+  );
 
   const publicationTypes = ['book', 'periodic', 'thesis', 'report'];
   const labs = ['LIRIS', 'AMPERE', 'LTDS', 'ICJ', 'LMFA'];
@@ -94,7 +112,10 @@ export default function Publications() {
       return;
     }
 
-    toast.success(`Successfully borrowed "${publication.title}" from ${availableCopy.labName}`);
+    borrowMutation.mutate({
+      publicationId: publication.id,
+      labId: availableCopy.labId,
+    });
   };
 
   const getAvailability = (publication: Publication) => {
@@ -308,11 +329,6 @@ export default function Publications() {
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <CardContent className="p-4 space-y-4">
-                    {/* Book cover placeholder */}
-                    <div className="aspect-[3/4] rounded-lg bg-gradient-to-br from-secondary to-muted flex items-center justify-center overflow-hidden">
-                      <BookOpen className="w-12 h-12 text-muted-foreground/50" />
-                    </div>
-
                     {/* Content */}
                     <div className="space-y-2">
                       <Badge variant={publication.type as any} className="text-xs">
@@ -360,16 +376,25 @@ export default function Publications() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setSelectedPublicationId(Number(publication.id))}
+                      >
                         Details
                       </Button>
                       <Button
                         size="sm"
                         className="flex-1"
-                        disabled={!canBorrow}
+                        disabled={!canBorrow || borrowMutation.isPending}
                         onClick={() => handleBorrow(publication)}
                       >
-                        <BookMarked className="w-4 h-4 mr-1" />
+                        {borrowMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        ) : (
+                          <BookMarked className="w-4 h-4 mr-1" />
+                        )}
                         Borrow
                       </Button>
                     </div>
@@ -385,12 +410,7 @@ export default function Publications() {
                 className="hover:border-primary/30 transition-all duration-200 animate-slide-in-right"
                 style={{ animationDelay: `${index * 30}ms` }}
               >
-                <CardContent className="p-4 flex items-start gap-4">
-                  {/* Cover */}
-                  <div className="w-16 h-24 rounded bg-gradient-to-br from-secondary to-muted flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-6 h-6 text-muted-foreground/50" />
-                  </div>
-
+                <CardContent className="p-4">
                   {/* Content */}
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-start justify-between gap-2">
@@ -438,11 +458,23 @@ export default function Publications() {
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedPublicationId(Number(publication.id))}
+                    >
                       Details
                     </Button>
-                    <Button size="sm" disabled={!canBorrow} onClick={() => handleBorrow(publication)}>
-                      <BookMarked className="w-4 h-4 mr-1" />
+                    <Button
+                      size="sm"
+                      disabled={!canBorrow || borrowMutation.isPending}
+                      onClick={() => handleBorrow(publication)}
+                    >
+                      {borrowMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <BookMarked className="w-4 h-4 mr-1" />
+                      )}
                       Borrow
                     </Button>
                   </div>
@@ -465,6 +497,74 @@ export default function Publications() {
           </Button>
         </div>
       )}
+
+      {/* Current Borrowers Dialog */}
+      <Dialog open={!!selectedPublicationId} onOpenChange={(open) => !open && setSelectedPublicationId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Current Borrowers</DialogTitle>
+            <DialogDescription>
+              Users who currently have borrowed copies of this publication from labs you have access to
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {loadingBorrowers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : currentBorrowers.length > 0 ? (
+              <div className="space-y-3">
+                {currentBorrowers.map((borrower: any, index: number) => (
+                  <Card key={index}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-semibold text-foreground">{borrower.borrower_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="w-4 h-4" />
+                            <span>{borrower.borrower_email}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Building2 className="w-4 h-4" />
+                            <span>{borrower.lab_name}</span>
+                          </div>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="w-3 h-3" />
+                            <span>Borrowed: {new Date(borrower.borrow_date).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm">
+                            <Clock className="w-3 h-3" />
+                            <span className={
+                              new Date(borrower.due_date) < new Date()
+                                ? 'text-destructive font-semibold'
+                                : 'text-muted-foreground'
+                            }>
+                              Due: {new Date(borrower.due_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">
+                  No current borrowers found for this publication in labs you have access to.
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

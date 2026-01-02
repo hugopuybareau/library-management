@@ -9,6 +9,23 @@ export function useBorrowings() {
   });
 }
 
+export function useBorrowMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ publicationId, labId }: { publicationId: number; labId: number }) =>
+      borrowingsApi.createBorrowing(publicationId, labId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['borrowings'] });
+      queryClient.invalidateQueries({ queryKey: ['publications'] });
+      toast.success('Book borrowed successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to borrow book');
+    },
+  });
+}
+
 export function useReturnMutation() {
   const queryClient = useQueryClient();
 
