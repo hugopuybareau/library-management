@@ -49,8 +49,9 @@ RETURNS TABLE (
     identifier VARCHAR(100)
 ) AS $$
 BEGIN
+    SET search_path = library;
     RETURN QUERY
-    SELECT 
+    SELECT
         p.id_publication,
         p.title,
         p.publication_type,
@@ -84,6 +85,7 @@ RETURNS TABLE (
     breakdown JSONB
 ) AS $$
 BEGIN
+    SET search_path = library;
     RETURN QUERY
     WITH converted_prices AS (
         SELECT 
@@ -137,6 +139,7 @@ DECLARE
     v_has_access BOOLEAN;
     v_available_count INTEGER;
 BEGIN
+    SET search_path = library;
     -- Check if user has access to any lab that owns this publication
     SELECT EXISTS(
         SELECT 1
@@ -194,8 +197,9 @@ RETURNS TABLE (
     due_date DATE
 ) AS $$
 BEGIN
+    SET search_path = library;
     RETURN QUERY
-    SELECT 
+    SELECT
         b.email AS borrower_email,
         lu.name AS borrower_name,
         l.name AS lab_name,
@@ -234,8 +238,9 @@ RETURNS TABLE (
     categories TEXT
 ) AS $$
 BEGIN
+    SET search_path = library;
     RETURN QUERY
-    SELECT 
+    SELECT
         p.id_publication,
         p.title,
         rb.isbn,
@@ -274,8 +279,9 @@ RETURNS TABLE (
     publisher VARCHAR
 ) AS $$
 BEGIN
+    SET search_path = library;
     RETURN QUERY
-    SELECT 
+    SELECT
         p.id_publication,
         p.title,
         p.year_publication,
@@ -311,8 +317,9 @@ RETURNS TABLE (
     edition VARCHAR(50)
 ) AS $$
 BEGIN
+    SET search_path = library;
     RETURN QUERY
-    SELECT 
+    SELECT
         p.year_publication AS year,
         p.title,
         rb.isbn,
